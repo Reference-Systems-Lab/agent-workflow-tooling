@@ -1,0 +1,31 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agent-workflow-tooling",
+  "owner": {
+    "name": "Andrew Bilenduke",
+    "email": "andrewbilenduke@gmail.com"
+  },
+  "metadata": {
+    "description": "Reference Systems Lab's shared skills, agents and hooks, so every contributor works the same way in Claude Code, Codex and GitHub Copilot."
+  },
+  "plugins": [
+    {
+      "name": "workflow",
+      "source": "./plugins/workflow",
+      "description": "GitHub workflow: feature, bugfix and PR feedback skills that keep each piece of work on its issue, and worklog time-ledger hooks.",
+      "category": "development"
+    },
+    {
+      "name": "frontend",
+      "source": "./plugins/frontend",
+      "description": "The frontend-craft skill for distinctive, accessible, production-quality interfaces.",
+      "category": "development"
+    },
+    {
+      "name": "org",
+      "source": "./plugins/org",
+      "description": "Organization setup: labels, a ruleset on the default branch, CODEOWNERS, the team Project, and the org profile.",
+      "category": "development"
+    }
+  ]
+}

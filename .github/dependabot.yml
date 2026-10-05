@@ -1,0 +1,14 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # The root package.json holds every dependency; plugins/workflow has none of its own.
+  # Eval fixtures are left out: they are inputs to the evals, not shipped code.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly

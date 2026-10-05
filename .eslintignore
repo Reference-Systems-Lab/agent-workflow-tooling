@@ -1,0 +1,5 @@
+node_modules/
+/references/
+.vscode/
+README*.md
+plugins/workflow/

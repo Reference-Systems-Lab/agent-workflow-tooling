@@ -1,0 +1,9 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "workflow",
+  "description": "Development workflow: feature skills that keep each piece of work on its GitHub issue (brief, research, plan, execute, review), bugfix and feedback, and worklog, which measures active time on each step and forecasts estimates from that history, for Claude Code and Codex.",
+  "author": {
+    "name": "Andrew Bilenduke",
+    "email": "andrewbilenduke@gmail.com"
+  }
+}

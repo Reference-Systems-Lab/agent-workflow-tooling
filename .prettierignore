@@ -1,0 +1,18 @@
+node_modules/
+/references/
+/tests/
+.vscode/
+README*.md
+!evals/*/README.md
+package-lock.json
+.superpowers/
+
+# Preserve captured evaluation responses verbatim.
+evals/*/results/
+evals/frontend-craft/runs/
+evals/frontend-craft/fixtures/**/dist/
+# Preserve upstream legal notices and vendored skills verbatim.
+**/third-party/
+# workflow plugin build output.
+plugins/workflow/dist/
+plugins/workflow/dist-test/

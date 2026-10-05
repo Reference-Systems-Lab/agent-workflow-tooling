@@ -1,0 +1,28 @@
+{
+  "marketplaces": {
+    "agent-workflow-tooling": "Reference-Systems-Lab/agent-workflow-tooling",
+    "claude-plugins-official": "anthropics/claude-plugins-official"
+  },
+  "profiles": {
+    "base": [
+      "workflow@agent-workflow-tooling",
+      "org@agent-workflow-tooling",
+      "context7@claude-plugins-official"
+    ],
+    "storefront": [
+      "@base",
+      "frontend@agent-workflow-tooling",
+      "playwright@claude-plugins-official"
+    ],
+    "admin": ["@base", "frontend@agent-workflow-tooling", "playwright@claude-plugins-official"],
+    "checkout": ["@base", "frontend@agent-workflow-tooling", "playwright@claude-plugins-official"],
+    "design-system": [
+      "@base",
+      "frontend@agent-workflow-tooling",
+      "playwright@claude-plugins-official"
+    ],
+    "backend": ["@base"],
+    "platform": ["@base"],
+    "agent-workflow-tooling": ["@base"]
+  }
+}

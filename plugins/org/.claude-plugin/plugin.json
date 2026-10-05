@@ -1,0 +1,9 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "org",
+  "description": "Sets up a Reference-Systems-Lab repository the way the workflow plugin expects: labels, a ruleset on the default branch, CODEOWNERS, the team Project that plans every repository's work, and the organization profile.",
+  "author": {
+    "name": "Andrew Bilenduke",
+    "email": "andrewbilenduke@gmail.com"
+  }
+}
