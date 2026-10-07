@@ -193,9 +193,12 @@ and add the note to Links.
 
 ## Closing
 
-The issue closes when the PR carrying `Closes #N` merges into the default branch, or by hand when
-the work ends some other way. Before it is called done, `feature-review` checks the plan's
-Definition of Done, runs `worklog post issue-N`, writes the `retro` comment, and sets `stage:done`.
+Every repository has "Auto-close issues with merged linked pull requests" turned off (Settings →
+General → Issues), so merging the PR carrying `Closes #N` links it to the issue but leaves the issue
+open until its work is reviewed. `feature-review` checks the plan's Definition of Done, runs
+`worklog post issue-N`, writes the `retro` comment and sets `stage:done`. Then, once that PR has
+merged, it closes the issue with `gh issue close N --reason completed`. Work that ends some other
+way is closed by hand.
 The quick track has no plan; its Definition of Done is that every acceptance check passes and is in
 the journal, the repository's required checks pass, the PR carrying `Closes #N` is merged, and the
 time is posted with a short retro.
