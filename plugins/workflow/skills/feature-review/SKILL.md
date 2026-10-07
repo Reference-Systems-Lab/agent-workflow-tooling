@@ -74,6 +74,7 @@ Once the verdict is **No findings** and the user accepts the work, or after the 
    ```
 
 4. Propose each lesson's change to the user; make it, or open its issue, only when they agree.
-5. Swap the stage label for `stage:done` and set the status section's next action to "Done". The
-   issue closes when the PR carrying `Closes #N` merges; if it is still open after that, check the
-   PR's `closingIssuesReferences` and close it by hand with the user's agreement.
+5. Swap the stage label for `stage:done` and set the status section's next action to "Done".
+   Merging does not close the issue, because auto-close is off (contract, Closing). If the PR
+   carrying `Closes #N` has merged, close it with `gh issue close N --reason completed`. If it has
+   not, set the next action to "Close when PR #P merges" and close the issue then.

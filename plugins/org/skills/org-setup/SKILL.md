@@ -100,7 +100,10 @@ Project (`gh auth refresh -s project`).
    Start from `references/profile-README.md`, fill `ORG_NAME`, and keep it to what is true today:
    how work moves, and which repositories to look at.
 7. **Auto-close setting.** The workflow plugin needs "Auto-close issues with merged linked pull
-   requests" turned off. The agent cannot change it; follow the contract's section on that setting.
+   requests" turned off, under Settings → General → Issues, so an issue stays open until
+   `feature-review` closes it (contract, Closing). GitHub has no API for the setting, so the user
+   turns it off. Do not confuse it with the Project workflow "Auto-close issue", which acts on the
+   Status field and can stay off.
 
 ## Report
 
