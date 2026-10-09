@@ -51,6 +51,14 @@ step carries an active-time estimate and its basis. Steps a subagent could do in
   work touches authentication, secrets, user data or untrusted input.
 - **Rollout and rollback:** how the change reaches users, data migrations, feature flags, and how to
   undo it. "None" is a valid answer only with the reason it is trivially reversible.
+- **First publication:** when the work publishes an image, package or other artifact for the first
+  time, list the manual steps that publishing needs, each with who does it and when. Examples: a new
+  registry package's visibility, its consumers' read access, and the token scopes that verifying it
+  needs. Settings without an API, and interactive sign-ins, go in the plan ahead of time, not in the
+  step that discovers them. Mark the settings that can't be undone (a public package can't be made
+  private again) and what they must stay. Rehearse the exact publish commands the workflow runs,
+  with a dry run (`npm publish --dry-run <same path>`), not only the packing; and check that
+  consumers' install settings accept a fresh release (a minimum release age blocks one for days).
 
 ## Decisions and readiness
 

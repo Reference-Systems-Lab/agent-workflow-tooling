@@ -61,6 +61,8 @@ first; it is the contract for the issue, and the repository's `AGENTS.md` wins o
    **Commit:** `<sha>` · **Status:** Complete | Complete with notes | Blocked
    ```
 
+   Copy every commit reference, here and in the PR body, from `git log`, never from memory.
+
 5. **Close:** `worklog finish issue-N S<n>`, `worklog post issue-N`, and update the status section's
    next action and active time.
 
