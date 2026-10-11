@@ -25,7 +25,7 @@
     "rsl": "cli/rsl.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "test": "node --test cli/test/*.test.mjs && npm --prefix plugins/workflow test",
