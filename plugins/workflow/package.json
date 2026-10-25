@@ -5,7 +5,7 @@
   "description": "workflow: the worklog time ledger and the issue commands the feature skills write with, fed by Claude Code and Codex hooks",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
