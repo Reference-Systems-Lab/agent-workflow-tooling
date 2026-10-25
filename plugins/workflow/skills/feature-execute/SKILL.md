@@ -93,7 +93,7 @@ incomplete` or `Blocked`, naming what remains.
    changed per step with commits, the REQ coverage table, the verification actually run, and risk and
    rollback; use the repository's template when it has one. Confirm the link with
    `gh pr view --json closingIssuesReferences`.
-4. Status and Links sections: branch and PR. Swap `stage:execute` for `stage:review`.
+4. Status and Links sections: branch and PR. `worklog issue board N --stage review`.
 5. Report: delivered behaviour, verification results and gaps, the PR, and the next skill:
    `feature-review`.
 

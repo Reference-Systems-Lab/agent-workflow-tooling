@@ -29,15 +29,19 @@ answer.
 | Nothing                                             | Open one                                                            |
 
 Opening or adopting an issue publishes; ask first, and say so when the repository is public (one
-question, with the rest of round one). Then:
+question, with the rest of round one). The same question says the issue joins the current sprint
+unless the user wants it in the backlog, and recommends a priority. Then:
 
 1. `gh issue create --title "<outcome in a few words>" --body-file -`, with a short opening line
    and nothing else, or adopt the existing issue.
 2. Write all six sections in contract order with `worklog issue section`: `status`, `brief`, then
    `spec`, `plan`, `decisions` and `links` holding `_Not written yet._`.
-3. Labels: `type:feature` (or `type:spike` for a question without a feature) and `stage:brief`;
-   the track label once it is picked. Create missing labels only when the user agrees.
-4. `worklog start issue-N brief --estimate <estimate>`, after checking `.agent/` is ignored.
+3. Labels: `type:feature` (or `type:spike` for a question without a feature); the track label once
+   it is picked. Create missing labels only when the user agrees.
+4. `worklog issue board N --stage brief --sprint current --priority <P>`, which adds `stage:brief`
+   and puts the issue on the team Project (contract: Team Project). Leave out `--sprint` when the
+   user wants it in the backlog.
+5. `worklog start issue-N brief --estimate <estimate>`, after checking `.agent/` is ignored.
 
 ## 3. Interview
 
@@ -96,8 +100,8 @@ there are enough of them. Mention it when the appetite sits below their lower qu
 
 1. Status section: stage, track, next action, appetite.
 2. `worklog finish issue-N brief`, then `worklog post issue-N`.
-3. Swap `stage:brief` for the next stage's label: `stage:research` (full), `stage:plan`
-   (standard) or `stage:execute` (quick).
+3. Move to the next stage with `worklog issue board N --stage <next>`: `research` (full), `plan`
+   (standard) or `execute` (quick, adding `--estimate <S1 estimate>`).
 4. Report the issue link, the track, open assumptions and the next skill: `feature-research`,
    `feature-plan` or `feature-execute`.
 
@@ -109,4 +113,5 @@ there are enough of them. Mention it when the appetite sits below their lower qu
 | Issue body written freehand, sections added later    | Six marked sections at once, in order                       |
 | Research or plan text in the brief section           | Research is a comment; spec and plan are their own sections |
 | Time started at research                             | `worklog start issue-N brief` before the interview          |
+| Issue opened but left off the team Project           | `worklog issue board N` straight after opening it           |
 | Branch created now                                   | Branches come at execute, with `gh issue develop`           |

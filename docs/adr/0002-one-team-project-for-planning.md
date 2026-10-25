@@ -1,6 +1,7 @@
 # 2. One team Project for planning
 
-- **Status:** Accepted
+- **Status:** Accepted; "Getting items in" superseded by
+  [ADR 3](0003-workflow-skills-keep-the-team-project-in-step.md)
 - **Date:** 2026-10-04
 
 ## Context

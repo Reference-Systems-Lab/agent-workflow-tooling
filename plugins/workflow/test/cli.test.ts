@@ -423,6 +423,143 @@ test('issue commands pass --repo through to gh and refuse text over GitHub’s s
   assert.match(big.err, /65536/);
 });
 
+/** The calls that change something on GitHub: REST writes and GraphQL mutations. */
+function writes(): typeof github.calls {
+  return github.calls.filter((c) => c.args.includes('--method') || (c.input ?? '').includes('mutation'));
+}
+
+test('issue board puts the issue on the linked Project once and mirrors its stage label', async () => {
+  github.issue(12, '', { labels: ['type:feature', 'stage:plan'] });
+  github.teamProject();
+  const first = await run(['issue', 'board', '12']);
+  assert.equal(first.code, 0, first.err);
+  assert.match(first.out, /Added #12 to commerce work\.\n#12 on commerce work: Stage plan\.\n/);
+  assert.deepEqual(github.item(12), { Stage: 'plan' });
+  // The repository comes from the current directory through gh's placeholders.
+  assert.ok(github.calls[0]?.args.includes('owner={owner}'));
+  const second = await run(['issue', 'board', '12']);
+  assert.equal(second.code, 0, second.err);
+  assert.doesNotMatch(second.out, /Added/);
+  assert.equal(github.items.length, 1);
+});
+
+test('issue board --stage leaves exactly one stage label, then mirrors it', async () => {
+  github.issue(12, '', { labels: ['type:feature', 'stage:brief', 'stage:plan'] });
+  github.teamProject();
+  const result = await run(['issue', 'board', '12', '--stage', 'execute']);
+  assert.equal(result.code, 0, result.err);
+  assert.match(result.out, /#12 is at stage:execute\./);
+  assert.deepEqual(github.issues.get(12)?.labels, ['type:feature', 'stage:execute']);
+  assert.deepEqual(github.item(12), { Stage: 'execute' });
+  const labelCalls = (): number => github.calls.filter((c) => c.args.some((a) => a.includes('/labels'))).length;
+  const before = labelCalls();
+  await run(['issue', 'board', '12', '--stage', 'execute']);
+  assert.equal(labelCalls(), before);
+});
+
+test('issue board refuses a missing stage label and bad values before writing anything', async () => {
+  github.issue(12, '', { labels: ['stage:execute'] });
+  github.teamProject();
+  github.labels = github.labels.filter((l) => l !== 'stage:review');
+  const missing = await run(['issue', 'board', '12', '--stage', 'review']);
+  assert.equal(missing.code, 1);
+  assert.match(missing.err, /acme\/widgets has no label stage:review; create it only with the user's agreement/);
+  assert.match((await run(['issue', 'board', '12', '--stage', 'shipping'])).err, /--stage takes one of brief, /);
+  assert.match((await run(['issue', 'board', '12', '--sprint', 'later'])).err, /--sprint takes current, next, none/);
+  assert.match((await run(['issue', 'board', '12', '--project', 'two'])).err, /--project takes a Project number/);
+  assert.match((await run(['issue', 'board', '12', '--estimate', 'soon'])).err, /Cannot read estimate/);
+  assert.match(
+    (await run(['issue', 'board', '12', '--priority', 'P9'])).err,
+    /Priority on commerce work has no option "P9"; it has P0, P1, P2/,
+  );
+  assert.deepEqual(writes(), []);
+  assert.deepEqual(github.issues.get(12)?.labels, ['stage:execute']);
+});
+
+test('issue board --sprint picks the sprint today falls in or the next one, and none clears it', async () => {
+  github.issue(12, '', { labels: ['stage:brief'] });
+  github.teamProject();
+  await run(['issue', 'board', '12', '--sprint', 'current']);
+  assert.equal(github.item(12)?.['Sprint'], 'Sprint 2');
+  advance(13 * 24 * 60); // 2026-10-18, Sprint 2's last day
+  await run(['issue', 'board', '12', '--sprint', 'current']);
+  assert.equal(github.item(12)?.['Sprint'], 'Sprint 2');
+  const next = await run(['issue', 'board', '12', '--sprint', 'next']);
+  assert.equal(next.code, 0, next.err);
+  assert.match(next.out, /Stage brief · Sprint Sprint 3\./);
+  const none = await run(['issue', 'board', '12', '--sprint', 'none']);
+  assert.equal(none.code, 0, none.err);
+  assert.equal(github.item(12)?.['Sprint'], undefined);
+  advance(15 * 24 * 60); // 2026-11-02: Sprint 3 has ended and none follows it
+  const gap = await run(['issue', 'board', '12', '--sprint', 'current']);
+  assert.equal(gap.code, 1);
+  assert.match(gap.err, /No sprint on commerce work covers 2026-11-02; add sprints to its Sprint field/);
+});
+
+test('issue board gives an epic no sprint but keeps it on the board', async () => {
+  github.issue(4, '', { labels: ['stage:brief'] });
+  github.teamProject();
+  github.subIssues.set(4, 6);
+  const refused = await run(['issue', 'board', '4', '--sprint', 'current']);
+  assert.equal(refused.code, 1);
+  assert.match(refused.err, /sub-issues, so it is an epic and takes no sprint/);
+  assert.deepEqual(writes(), []);
+  const cleared = await run(['issue', 'board', '4', '--sprint', 'none']);
+  assert.equal(cleared.code, 0, cleared.err);
+  assert.deepEqual(github.item(4), { Stage: 'brief' });
+});
+
+test('issue board sets the estimate in hours and the priority by name, and leaves Stage alone without a stage label', async () => {
+  github.issue(12, '', { labels: ['bug'] });
+  github.teamProject();
+  const result = await run(['issue', 'board', '12', '--estimate', '4h30m', '--priority', 'P1']);
+  assert.equal(result.code, 0, result.err);
+  assert.deepEqual(github.item(12), { Estimate: 4.5, Priority: 'P1' });
+  assert.match(result.out, /#12 on commerce work: Estimate 4\.5h · Priority P1\./);
+});
+
+test('without a linked Project, issue board only swaps the stage label', async () => {
+  github.issue(12, '', { labels: ['stage:plan'] });
+  const result = await run([
+    'issue',
+    'board',
+    '12',
+    '--stage',
+    'execute',
+    '--sprint',
+    'current',
+    '--repo',
+    'acme/tools',
+  ]);
+  assert.equal(result.code, 0, result.err);
+  assert.deepEqual(github.issues.get(12)?.labels, ['stage:execute']);
+  assert.match(result.out, /No open Project is linked to acme\/tools; nothing to put on a board/);
+  assert.ok(github.calls[0]?.args.includes('owner=acme'));
+  assert.ok(github.calls.some((c) => c.args.includes('repos/acme/tools/issues/12/labels/stage%3Aplan')));
+  assert.equal(
+    github.calls.some((c) => (c.input ?? '').includes('mutation')),
+    false,
+  );
+});
+
+test('with several linked Projects, issue board needs --project, and a closed one does not count', async () => {
+  github.issue(12, '', { labels: ['stage:brief'] });
+  github.teamProject();
+  github.teamProject(5, 'design reviews');
+  github.teamProject(7, 'old board').closed = true;
+  const ambiguous = await run(['issue', 'board', '12']);
+  assert.equal(ambiguous.code, 1);
+  assert.match(
+    ambiguous.err,
+    /linked to this repository: 2 \(commerce work\), 5 \(design reviews\)\. Pick one with --project/,
+  );
+  assert.match((await run(['issue', 'board', '12', '--project', '7'])).err, /Project 7 is not an open Project/);
+  const picked = await run(['issue', 'board', '12', '--project', '5']);
+  assert.equal(picked.code, 0, picked.err);
+  assert.deepEqual(github.item(12, 'PVT_5'), { Stage: 'brief' });
+  assert.equal(github.item(12), undefined);
+});
+
 test('post leaves a data line in the time comment that history can read back', async () => {
   github.issue(9);
   await run(['start', 'issue-9', 'S1', '--estimate', '1h'], claude);

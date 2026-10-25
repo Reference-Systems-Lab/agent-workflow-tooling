@@ -99,4 +99,5 @@ bigger PR: defer it and say so.
    ```
 
 Finish by telling the user how many items were fixed, deferred and declined. Offer to open each
-deferred item as an issue (`gh issue create`) and do it only when they agree.
+deferred item as an issue (`gh issue create`) and do it only when they agree. With `worklog` on the
+`PATH`, `worklog issue board N` then puts it in the team Project's backlog.

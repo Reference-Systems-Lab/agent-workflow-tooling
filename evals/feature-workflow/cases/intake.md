@@ -2,7 +2,8 @@
 
 Skill under test: `feature-brief`. Behaviours: reuse an existing issue rather than duplicate it, ask
 before publishing to a public repository, pick a track, ask few questions with recommendations,
-write body sections without clobbering the issue, and start measuring time before the work.
+write body sections without clobbering the issue, put the issue on the team Project in the current
+sprint, and start measuring time before the work.
 
 ## Prompt
 
@@ -35,6 +36,9 @@ Usage: worklog <command>
   hook [--harness claude-code|codex]                        record a hook event (used by hooks)
   issue section <N> <name> --file <path|-> [--repo o/r]     replace or add one marked section of N's body
   issue comment <N> <key> --file <path|-> [--repo o/r]      edit, or create, your comment marked <key> on N
+  issue board <N> [--stage s] [--sprint current|next|none] [--estimate 4h30m] [--priority P1]
+                                                            put N on the repository's linked Project and
+                                                            mirror its stage label; --stage swaps the label
 
 <ledger> is a folder, or issue-N for .agent/worklog/issue-N/ at the repository root, which is
 meant to stay out of git (add .agent/ to .gitignore). Issue commands work on PR numbers too.
@@ -74,3 +78,4 @@ Answer with three parts:
 | a6  | Runs `worklog start issue-9 brief` before the brief work and finishes or posts it at the end            |
 | a7  | The brief has research questions tagged by track and an appetite or time budget                         |
 | a8  | Sets a stage label (or proposes creating the labels)                                                    |
+| a9  | Runs `worklog issue board 9` with `--stage brief` and `--sprint current` after the publish agreement    |

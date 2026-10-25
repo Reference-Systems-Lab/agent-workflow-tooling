@@ -85,14 +85,15 @@ Project (`gh auth refresh -s project`).
      Two settings have no API and are set on github.com: the Current sprint board's columns
      (Stage) and the Roadmap's dates (Sprint).
 
-   The `stage:*` labels stay the source of truth; the Project only mirrors them. Issues reach the
-   Project through its built-in auto-add workflows, set in its Workflows settings on github.com.
-   Each follows one repository, and GitHub Team allows 5: they follow `commerce`,
-   `commerce-backend`, `commerce-storefront`, `commerce-checkout` and `commerce-admin`. A sub-issue
-   created from an epic starts with the epic's projects selected. Other issues in
-   `commerce-platform`, `design-system` and `agent-workflow-tooling` are added during
-   backlog refinement. Check the auto-add workflows and views are set and list any that are missing
-   in the report.
+   The `stage:*` labels stay the source of truth; the Project only mirrors them. The workflow
+   skills put every issue they open on the Project, mirror its stage and set its sprint with
+   `worklog issue board` (ADR 3 in agent-workflow-tooling). The built-in auto-add workflows, set in
+   its Workflows settings on github.com, catch issues opened by hand. Each follows one repository,
+   and GitHub Team allows 5: they follow `commerce`, `commerce-backend`, `commerce-storefront`,
+   `commerce-checkout` and `commerce-admin`. A sub-issue created from an epic starts with the epic's
+   projects selected. An issue opened by hand in `commerce-platform`, `design-system` or
+   `agent-workflow-tooling` reaches the board when someone runs `worklog issue board N` on it. Check
+   the auto-add workflows and views are set and list any that are missing in the report.
 
 6. **Organization profile** (_ask_). The profile is a README in the organization's `.github`
    repository at `profile/README.md`. If `{owner}/.github` does not exist, ask before creating it

@@ -124,6 +124,6 @@ Estimate 1h30m · Basis: <calibration or "no baseline: judgement, 1h–2h">
    under Revisions with the reason and the affected IDs. A change to a confirmed decision needs the
    user: record it as `Open`, mark the steps that wait on it, and untick the Definition of Ready.
 4. `worklog finish issue-N plan`, `worklog post issue-N`; status section with the total estimate;
-   swap `stage:plan` for `stage:execute` once approved.
+   once approved, `worklog issue board N --stage execute --estimate <total>`.
 5. Report the open decisions, the total estimate against the appetite, and the next skill:
    `feature-execute`, once the user approves.

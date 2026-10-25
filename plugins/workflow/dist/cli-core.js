@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { computeTimes } from './active.js';
+import { chooseProject, isSprint, isStage, planWrites, SPRINTS, stageSwap, STAGES } from './board.js';
 import { formatMinutes, parseEstimate } from './duration.js';
 import { GitHub } from './github.js';
 import { collectHistory } from './collect.js';
@@ -29,6 +30,10 @@ const USAGE = `Usage: worklog <command>
                                                             replace or add it from the file (- is stdin)
   issue comment <N> <key> [--file <path|->] [--repo o/r]    print your comment marked <key> on N, or
                                                             edit or create it from the file
+  issue board <N> [--stage s] [--sprint current|next|none] [--estimate 4h30m] [--priority P1]
+                  [--project <number>] [--repo o/r]         put issue N on the repository's linked Project,
+                                                            mirror its stage label and set planning fields;
+                                                            --stage swaps the stage:* label first
 
 <ledger> is a folder, or issue-N for .agent/worklog/issue-N/ at the repository root, which is
 meant to stay out of git (add .agent/ to .gitignore). Issue commands work on PR numbers too.
@@ -339,8 +344,65 @@ async function content(file, deps) {
         throw new Error('The content is empty; nothing to write.');
     return text;
 }
+/** Puts the issue on the repository's linked Project and keeps its planning fields in step with it. */
+function board(args, deps) {
+    const { positional, flags } = parseArgs(args);
+    const number = issueNumber(positional[0]);
+    const stage = stringFlag(flags, 'stage');
+    if (stage !== undefined && !isStage(stage))
+        throw new UsageError(`--stage takes one of ${STAGES.join(', ')}.`);
+    const sprint = stringFlag(flags, 'sprint');
+    if (sprint !== undefined && !isSprint(sprint))
+        throw new UsageError(`--sprint takes ${SPRINTS.join(', ')}.`);
+    const estimate = stringFlag(flags, 'estimate');
+    const priority = stringFlag(flags, 'priority');
+    const projectNumber = stringFlag(flags, 'project');
+    if (projectNumber !== undefined && !/^\d+$/.test(projectNumber)) {
+        throw new UsageError('--project takes a Project number, such as 2.');
+    }
+    const gh = github(flags, deps);
+    // Everything is read and checked before the first write, so a refusal leaves the issue as it was.
+    const context = gh.boardContext(number);
+    const swap = stage === undefined ? { remove: [], add: null } : stageSwap(context.issue.labels, stage);
+    if (swap.add !== null && !context.stageLabels.includes(swap.add)) {
+        throw new Error(`${context.repo} has no label ${swap.add}; create it only with the user's agreement.`);
+    }
+    const labels = [...context.issue.labels.filter((l) => !swap.remove.includes(l)), ...(swap.add ? [swap.add] : [])];
+    const project = chooseProject(context.projects, projectNumber === undefined ? undefined : Number(projectNumber));
+    const request = {
+        ...(sprint === undefined ? {} : { sprint }),
+        ...(estimate === undefined ? {} : { estimateMin: parseEstimate(estimate) }),
+        ...(priority === undefined ? {} : { priority }),
+    };
+    const today = localIso(deps.now()).slice(0, 10);
+    const issueState = { labels, subIssues: context.issue.subIssues };
+    const writes = project === null ? [] : planWrites(project, issueState, request, today);
+    for (const label of swap.remove)
+        gh.removeLabel(number, label);
+    if (swap.add !== null)
+        gh.addLabel(number, swap.add);
+    if (stage !== undefined)
+        deps.stdout(`#${number} is at stage:${stage}.\n`);
+    // A repository without a board still gets its label swapped, so the skills work anywhere.
+    if (project === null) {
+        deps.stdout(`No open Project is linked to ${context.repo}; nothing to put on a board.\n`);
+        return 0;
+    }
+    let item = context.issue.items.get(project.id);
+    if (item === undefined) {
+        item = gh.addToProject(project.id, context.issue.id);
+        deps.stdout(`Added #${number} to ${project.title}.\n`);
+    }
+    for (const write of writes)
+        gh.setField(project.id, item, write);
+    const set = writes.map((w) => `${w.field} ${w.shown}`).join(' · ');
+    deps.stdout(`#${number} on ${project.title}: ${set || 'no fields to set'}.\n`);
+    return 0;
+}
 async function issue(args, deps) {
     const [action, ...rest] = args;
+    if (action === 'board')
+        return board(rest, deps);
     const { positional, flags } = parseArgs(rest);
     const number = issueNumber(positional[0]);
     const key = checkKey(positional[1]);
@@ -356,7 +418,7 @@ async function issue(args, deps) {
         return 0;
     }
     if (file === undefined)
-        throw new UsageError(`Unknown issue action "${action ?? ''}"; use section or comment.`);
+        throw new UsageError(`Unknown issue action "${action ?? ''}"; use section, comment or board.`);
     if (action === 'section') {
         const done = gh.setSection(number, key, await content(file, deps));
         deps.stdout(done === 'added' ? `Added section ${key} to #${number}.\n` : `Updated section ${key} on #${number}.\n`);
@@ -367,7 +429,7 @@ async function issue(args, deps) {
         deps.stdout(`${done === 'created' ? 'Created' : 'Updated'} the ${key} comment on #${number}.\n`);
         return 0;
     }
-    throw new UsageError(`Unknown issue action "${action ?? ''}"; use section or comment.`);
+    throw new UsageError(`Unknown issue action "${action ?? ''}"; use section, comment or board.`);
 }
 /** The issue's ledgers on this machine, as history records (labels come from GitHub). */
 function localHistory(deps) {

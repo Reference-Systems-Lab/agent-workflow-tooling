@@ -3,8 +3,11 @@
 For a durable record, follow an explicit destination or repository convention. If the user asks for a
 record without specifying either, keep it in a GitHub issue, not in a file in the repository: reuse the
 issue for the same defect (`gh issue list --state all --search "<topic>"`, so a closed record for a recurring defect is found), otherwise create one with
-`gh issue create` after the user agrees, since that publishes the text. Without `gh` access or a
-GitHub remote, keep the record in chat. No record is required for every fix.
+`gh issue create` after the user agrees, since that publishes the text. With `worklog` on the `PATH`,
+put a new record on the team Project with `worklog issue board B --sprint current --priority <P>`,
+recommending the priority in the same question; in a repository without a linked Project it does
+nothing. Without `gh` access or a GitHub remote, keep the record in chat. No record is required for
+every fix.
 
 Keep these fields concise:
 
