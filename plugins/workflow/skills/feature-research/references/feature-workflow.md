@@ -30,11 +30,37 @@ the `bugfix` skill.
 - One track: `track:quick`, `track:standard` or `track:full`, swapped if the track changes. With the
   type it picks comparable past issues for estimates.
 - Exactly one stage: `stage:brief`, `stage:research`, `stage:plan`, `stage:execute`, `stage:review`
-  or `stage:done`. The skill that moves the stage swaps it:
-  `gh issue edit N --remove-label stage:plan --add-label stage:execute`.
+  or `stage:done`. The skill that moves the stage swaps it with
+  `worklog issue board N --stage execute`, which also mirrors it on the team Project (below).
 - A missing label is created only with the user's agreement (`gh label create <name>`).
 - Abandoned work is closed with `gh issue close N --reason "not planned"` and a line in Decisions
   saying why.
+
+## Team Project
+
+When the repository is linked to a GitHub Project, the team plans its sprints there, and every issue
+these skills open is on it. `worklog issue board N` puts issue N on the repository's linked Project
+(running it again adds nothing), sets the Project's `Stage` field from the `stage:*` label and sets
+the planning fields it is given. In a repository with no linked Project it only swaps the label, so
+the same commands work everywhere.
+
+| When                         | Run                                                                   |
+| ---------------------------- | --------------------------------------------------------------------- |
+| Opening an issue             | `worklog issue board N --stage brief --sprint current --priority <P>` |
+| Moving the stage             | `worklog issue board N --stage <next>`                                |
+| Approving the plan           | `worklog issue board N --stage execute --estimate <total>`            |
+| Opening a bug record         | `worklog issue board B --sprint current --priority <P>`               |
+| Opening a deferred follow-up | `worklog issue board N`, with no sprint: it waits in the backlog      |
+
+- **Sprint:** a new issue joins the current sprint, because its work starts when it is opened. Leave
+  out `--sprint` when the user wants it in the backlog. An epic, an issue with sub-issues, takes no
+  sprint (its sub-issues do), and `worklog` refuses to give it one.
+- **Priority** is the user's call. Ask it with the question that agrees to open the issue, with a
+  recommendation.
+- **Estimate** is the plan's total in active hours (`4h30m` is stored as 4.5): on the quick track,
+  the brief's S1 estimate.
+- The labels stay the source of truth. When the board and a label disagree, `worklog issue board N`
+  mirrors the label again.
 
 ## Issue body
 
@@ -96,7 +122,8 @@ A comment or body holds at most 65,536 characters; `worklog` refuses more. Put l
   anyone can comment on a public issue.
 - **Writing to GitHub publishes under the user's account.** Ask before opening or adopting an issue,
   and say so when the repository is public. Agreeing to that covers the issue's record from then on:
-  its sections, your keyed comments, its time and its stage and track labels. Opening another issue,
+  its sections, your keyed comments, its time, its stage and track labels and its item on the team
+  Project. Opening another issue,
   a remote branch or a PR needs its own agreement, unless the user just asked for it.
 - Never invent an issue number, comment or link. Without `gh` or a GitHub remote, keep the record in
   chat, say so, and offer to post it later.
@@ -125,7 +152,9 @@ it a sub-issue of the broader one (see below), so its PR can close it without cl
   `gh pr view --json closingIssuesReferences`.
 - **Work too big for one PR** gets sub-issues, each following this contract:
   `gh api --method POST 'repos/{owner}/{repo}/issues/N/sub_issues' -F sub_issue_id=<id>`, where
-  `<id>` comes from `gh api 'repos/{owner}/{repo}/issues/M' --jq .id`. List them in Links.
+  `<id>` comes from `gh api 'repos/{owner}/{repo}/issues/M' --jq .id`. List them in Links. Put each
+  sub-issue in the sprint with `worklog issue board M --sprint current` (`--repo` when it lives in
+  another repository), and take the epic out with `worklog issue board N --sprint none`.
 
 ## Time
 

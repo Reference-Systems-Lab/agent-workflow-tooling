@@ -36,6 +36,11 @@ into forecasts. It never reads Claude Code or Codex transcripts; the time ledger
   between `<!-- workflow:section NAME -->` markers in the body; a comment is the one your account
   posted that opens with `<!-- workflow:comment KEY -->`. Comments by anyone else never match. Both
   go through `gh api` and work on pull requests.
+- **Board:** `worklog issue board <N>` puts the issue on the Project its repository is linked to and
+  sets the Project's `Stage` from the `stage:*` label; `--stage` swaps the label first. It also sets
+  `--sprint current|next|none`, `--estimate` (stored in hours) and `--priority`, by name. It checks
+  everything before it writes, refuses a sprint for an epic, and only swaps the label when no Project
+  is linked. The skills run it wherever they open an issue or move its stage.
 - **Estimates:** `worklog history` reads every issue's `time` comment (cached for closed issues in
   `.agent/worklog/history.json`) and reports actual/estimate by kind of step, plus the unplanned QA,
   review-fix and bug-fix time on top of plans. `worklog forecast S1=1h30m S2=45m` (with

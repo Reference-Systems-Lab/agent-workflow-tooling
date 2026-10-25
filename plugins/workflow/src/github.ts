@@ -1,3 +1,4 @@
+import type { BoardContext, FieldWrite, Iteration, ProjectField } from './board.js';
 import {
   checkBodySize,
   findMarkedComment,
@@ -14,6 +15,67 @@ export type Exec = (
   input?: string,
 ) => { status: number; stdout: string; stderr: string };
 
+/** The issue, its stage labels and Project items, and the Projects linked to its repository. */
+const BOARD_QUERY = `query WorklogBoard($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    nameWithOwner
+    labels(first: 100, query: "stage:") { nodes { name } }
+    issue(number: $number) {
+      id
+      labels(first: 100) { nodes { name } }
+      subIssuesSummary { total }
+      projectItems(first: 50) { nodes { id project { id } } }
+    }
+    projectsV2(first: 20) {
+      nodes {
+        id number title closed
+        fields(first: 50) {
+          nodes {
+            __typename
+            ... on ProjectV2Field { id name dataType }
+            ... on ProjectV2SingleSelectField { id name options { id name } }
+            ... on ProjectV2IterationField { id name configuration { iterations { id title startDate duration } } }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const ADD_ITEM = `mutation WorklogAddItem($project: ID!, $content: ID!) {
+  addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } }
+}`;
+
+const SET_FIELD = `mutation WorklogSetField($project: ID!, $item: ID!, $field: ID!, $value: ProjectV2FieldValue!) {
+  updateProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field, value: $value }) {
+    projectV2Item { id }
+  }
+}`;
+
+const CLEAR_FIELD = `mutation WorklogClearField($project: ID!, $item: ID!, $field: ID!) {
+  clearProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field }) {
+    projectV2Item { id }
+  }
+}`;
+
+interface RawField {
+  __typename: string;
+  id: string;
+  name: string;
+  dataType?: string;
+  options?: Array<{ id: string; name: string }>;
+  configuration?: { iterations: Iteration[] };
+}
+
+function projectField(raw: RawField): ProjectField {
+  const { id, name } = raw;
+  if (raw.__typename === 'ProjectV2SingleSelectField') return { kind: 'select', id, name, options: raw.options ?? [] };
+  if (raw.__typename === 'ProjectV2IterationField') {
+    return { kind: 'iteration', id, name, iterations: raw.configuration?.iterations ?? [] };
+  }
+  return raw.dataType === 'NUMBER' ? { kind: 'number', id, name } : { kind: 'other', id, name };
+}
+
 /** Talks to one repository's issues through `gh api`; PRs share the issue endpoints, so they work too. */
 export class GitHub {
   constructor(
@@ -26,11 +88,11 @@ export class GitHub {
     return `repos/${this.repo ?? '{owner}/{repo}'}/${rest}`;
   }
 
-  private api(args: string[], body?: string): unknown {
-    const input = body === undefined ? undefined : JSON.stringify({ body });
+  private api(args: string[], payload?: object): unknown {
+    const input = payload === undefined ? undefined : JSON.stringify(payload);
     const result = this.exec('gh', ['api', ...args, ...(input === undefined ? [] : ['--input', '-'])], input);
     if (result.status !== 0) {
-      const path = args.find((a) => a === 'user' || a.startsWith('repos/')) ?? args.join(' ');
+      const path = args.find((a) => a === 'user' || a === 'graphql' || a.startsWith('repos/')) ?? args.join(' ');
       throw new Error(`gh api ${path} failed: ${(result.stderr || result.stdout).trim()}`);
     }
     return JSON.parse(result.stdout || 'null') as unknown;
@@ -98,7 +160,7 @@ export class GitHub {
     const existed = readSection(before, name) !== null;
     const after = setSection(before, name, content);
     checkBodySize(after);
-    this.api(['--method', 'PATCH', this.path(`issues/${issue}`)], after);
+    this.api(['--method', 'PATCH', this.path(`issues/${issue}`)], { body: after });
     return existed ? 'updated' : 'added';
   }
 
@@ -113,10 +175,88 @@ export class GitHub {
     checkBodySize(body);
     const existing = this.markedComment(issue, key);
     if (existing) {
-      this.api(['--method', 'PATCH', this.path(`issues/comments/${existing.id}`)], body);
+      this.api(['--method', 'PATCH', this.path(`issues/comments/${existing.id}`)], { body });
       return 'updated';
     }
-    this.api(['--method', 'POST', this.path(`issues/${issue}/comments`)], body);
+    this.api(['--method', 'POST', this.path(`issues/${issue}/comments`)], { body });
     return 'created';
+  }
+
+  /** A GraphQL call whose variables go as JSON on stdin, so IDs and numbers keep their types. */
+  private graphql(query: string, variables: Record<string, unknown>): unknown {
+    return (this.api(['graphql'], { query, variables }) as { data: unknown }).data;
+  }
+
+  /** What `worklog issue board` needs to know before it writes anything. */
+  boardContext(issue: number): BoardContext {
+    const [owner, name] = this.repo?.split('/') ?? [];
+    // `gh` fills the {owner} and {repo} placeholders only in -F fields, from the current directory.
+    const where =
+      owner === undefined || name === undefined
+        ? ['-F', 'owner={owner}', '-F', 'name={repo}']
+        : ['-f', `owner=${owner}`, '-f', `name=${name}`];
+    const data = this.api(['graphql', ...where, '-F', `number=${issue}`, '-f', `query=${BOARD_QUERY}`]) as {
+      data: {
+        repository: {
+          nameWithOwner: string;
+          labels: { nodes: Array<{ name: string }> };
+          issue: {
+            id: string;
+            labels: { nodes: Array<{ name: string }> };
+            subIssuesSummary: { total: number };
+            projectItems: { nodes: Array<{ id: string; project: { id: string } }> };
+          };
+          projectsV2: {
+            nodes: Array<{
+              id: string;
+              number: number;
+              title: string;
+              closed: boolean;
+              fields: { nodes: RawField[] };
+            }>;
+          };
+        };
+      };
+    };
+    const repo = data.data.repository;
+    return {
+      repo: repo.nameWithOwner,
+      stageLabels: repo.labels.nodes.map((l) => l.name).filter((l) => l.startsWith('stage:')),
+      issue: {
+        id: repo.issue.id,
+        labels: repo.issue.labels.nodes.map((l) => l.name),
+        subIssues: repo.issue.subIssuesSummary.total,
+        items: new Map(repo.issue.projectItems.nodes.map((i) => [i.project.id, i.id])),
+      },
+      projects: repo.projectsV2.nodes.map((p) => ({
+        id: p.id,
+        number: p.number,
+        title: p.title,
+        closed: p.closed,
+        fields: p.fields.nodes.map(projectField),
+      })),
+    };
+  }
+
+  addLabel(issue: number, label: string): void {
+    this.api(['--method', 'POST', this.path(`issues/${issue}/labels`)], { labels: [label] });
+  }
+
+  removeLabel(issue: number, label: string): void {
+    this.api(['--method', 'DELETE', this.path(`issues/${issue}/labels/${encodeURIComponent(label)}`)]);
+  }
+
+  /** The issue's item on the Project; GitHub returns the existing item when it is already there. */
+  addToProject(projectId: string, contentId: string): string {
+    const data = this.graphql(ADD_ITEM, { project: projectId, content: contentId }) as {
+      addProjectV2ItemById: { item: { id: string } };
+    };
+    return data.addProjectV2ItemById.item.id;
+  }
+
+  setField(projectId: string, itemId: string, write: FieldWrite): void {
+    const ids = { project: projectId, item: itemId, field: write.fieldId };
+    if (write.value === undefined) this.graphql(CLEAR_FIELD, ids);
+    else this.graphql(SET_FIELD, { ...ids, value: write.value });
   }
 }
