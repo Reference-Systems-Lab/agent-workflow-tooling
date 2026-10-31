@@ -2,8 +2,8 @@
 name: org-setup
 description: >-
   Sets up a Reference-Systems-Lab repository the way the workflow plugin expects: the label set, a
-  ruleset on the default branch, CODEOWNERS, the team Project that plans every repository's work,
-  and the organization's profile README. Use when the user asks to set up, bootstrap or harden
+  ruleset on the default branch, CODEOWNERS, secret scanning and push protection, the team Project
+  that plans every repository's work, and the organization's profile README. Use when the user asks to set up, bootstrap or harden
   an organization repository, to add the org profile, or to check that a repository has the team
   infrastructure in place. Not for creating or transferring the organization itself.
 ---
@@ -105,6 +105,36 @@ Project (`gh auth refresh -s project`).
    `feature-review` closes it (contract, Closing). GitHub has no API for the setting, so the user
    turns it off. Do not confuse it with the Project workflow "Auto-close issue", which acts on the
    Status field and can stay off.
+
+8. **Secret scanning and push protection** (_ask_). New repositories have both off, so check every
+   time: `gh api repos/{owner}/{repo} --jq .security_and_analysis`. Turn on what is missing, then
+   read it back:
+
+   ```bash
+   gh api --method PATCH repos/{owner}/{repo} --input - <<'EOF'
+   {"security_and_analysis":{"secret_scanning":{"status":"enabled"},
+     "secret_scanning_push_protection":{"status":"enabled"}}}
+   EOF
+   ```
+
+   Then list open alerts with `gh api repos/{owner}/{repo}/secret-scanning/alerts?state=open`. The
+   history scan can take a while, so an alert can appear later. Report counts and secret types,
+   never a secret's value.
+
+9. **npm's release-age window.** A repository that installs npm packages has `min-release-age=7` in
+   its `.npmrc` (commerce ADR 0001), but a security fix doesn't have to wait it out. For a high or
+   critical advisory, first look for a fixed version already older than 7 days; then no exemption
+   is needed. Otherwise:
+   - Take the newest fixed version, and check it for a regression fix: node-forge 1.4.1 needed 1.4.2
+     the same day.
+   - Exempt only that package with `min-release-age-exclude[]=<package>`, naming the advisory in a
+     comment beside the line.
+   - Make the repository's lint fail once that version is 7 days old, so the line can't stay behind
+     (`scripts/check-repo.mjs` in commerce-storefront).
+   - Record the decision on the issue, and review it in the pull request.
+
+   This skips the wait, never the advisory: nothing is allowlisted. Everything else stays on the
+   normal window.
 
 ## Report
 
