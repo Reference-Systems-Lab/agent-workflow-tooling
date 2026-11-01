@@ -79,6 +79,10 @@ yourself before journalling it. Every duration comes from `worklog`; none is typ
   decide in Decisions and as a dated line under the plan's Revisions; requirement IDs stay stable.
 - **Active time passes the appetite:** stop and ask whether to cut scope, extend the appetite or
   stop.
+- **A PR is held on an advisory:** a recheck written into the plan never runs by itself, and CI
+  schedules cover only the default branch. Before stopping, add a weekly job to that repository that
+  reports on the PR which findings remain and which now have a fixed version, or open that job's
+  issue with the user's agreement. Remove the job when the PR merges.
 - **Testing beyond a step's own checks** (exploratory, manual, on staging) is step `qa`, with an
   estimate when the plan has one and without when it does not. Fixing findings from
   `feature-review` or PR review is step `feedback`. Both feed the allowance later forecasts add.
