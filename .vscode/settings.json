@@ -1,0 +1,5 @@
+{
+  // The Vitest extension treats every vite.config.* as a test project. The eval fixtures are not
+  // test projects and are never installed in place.
+  "vitest.configSearchPatternExclude": "{**/node_modules/**,**/vendor/**,**/.*/**,**/*.d.ts,**/evals/**/fixtures/**}"
+}
