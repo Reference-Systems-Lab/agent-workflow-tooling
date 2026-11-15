@@ -2,10 +2,11 @@
 name: org-setup
 description: >-
   Sets up a Reference-Systems-Lab repository the way the workflow plugin expects: the label set, a
-  ruleset on the default branch, CODEOWNERS, secret scanning and push protection, the team Project
-  that plans every repository's work, and the organization's profile README. Use when the user asks to set up, bootstrap or harden
-  an organization repository, to add the org profile, or to check that a repository has the team
-  infrastructure in place. Not for creating or transferring the organization itself.
+  ruleset on the default branch, CODEOWNERS, secret scanning, push protection and Dependabot
+  security updates, the team Project that plans every repository's work, and the organization's
+  profile README. Use when the user asks to set up, bootstrap or harden an organization repository,
+  to add the org profile, or to check that a repository has the team infrastructure in place. Not
+  for creating or transferring the organization itself.
 ---
 
 # Org setup
@@ -120,6 +121,19 @@ Project (`gh auth refresh -s project`).
    Then list open alerts with `gh api repos/{owner}/{repo}/secret-scanning/alerts?state=open`. The
    history scan can take a while, so an alert can appear later. Report counts and secret types,
    never a secret's value.
+
+   Dependabot security updates are off in new repositories as well. Without them a fix arrives only
+   with the weekly version update, after its cooldown. Check with
+   `gh api repos/{owner}/{repo}/automated-security-fixes --jq .enabled`, turn on what is missing
+   (alerts first, which the updates need), then read it back:
+
+   ```bash
+   gh api --method PUT repos/{owner}/{repo}/vulnerability-alerts
+   gh api --method PUT repos/{owner}/{repo}/automated-security-fixes
+   ```
+
+   Dependabot then opens a pull request as soon as an alert has a fixed version. The cooldown in
+   `dependabot.yml` doesn't apply to security updates, but npm's release-age window does: step 9.
 
 9. **npm's release-age window.** A repository that installs npm packages has `min-release-age=7` in
    its `.npmrc` (commerce ADR 0001), but a security fix doesn't have to wait it out. For a high or
