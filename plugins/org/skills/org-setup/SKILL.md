@@ -107,9 +107,10 @@ Project (`gh auth refresh -s project`).
    turns it off. Do not confuse it with the Project workflow "Auto-close issue", which acts on the
    Status field and can stay off.
 
-8. **Secret scanning and push protection** (_ask_). New repositories have both off, so check every
-   time: `gh api repos/{owner}/{repo} --jq .security_and_analysis`. Turn on what is missing, then
-   read it back:
+8. **Secret scanning, push protection and Dependabot security updates** (_ask_). New repositories
+   have secret scanning and push protection off, so check every time:
+   `gh api repos/{owner}/{repo} --jq .security_and_analysis`. Turn on what is missing, then read it
+   back:
 
    ```bash
    gh api --method PATCH repos/{owner}/{repo} --input - <<'EOF'
